@@ -1,0 +1,54 @@
+# Render blueprint for the Tulivu demo.
+#
+# This provisions a PostgreSQL database and a single Node web service with the
+# mock model, mock imagery, mock research and demo ad adapter. No paid keys are
+# required. Replace the mock providers explicitly if you want live generation.
+#
+# Docs: https://render.com/docs/blueprint-spec
+
+databases:
+  - name: tulivu-db
+    databaseName: tulivu
+    user: tulivu
+    plan: free
+    region: oregon
+
+services:
+  - type: web
+    name: tulivu
+    runtime: node
+    plan: free
+    region: oregon
+    buildCommand: corepack enable && pnpm install --frozen-lockfile && pnpm build
+    startCommand: corepack enable && pnpm start
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      - key: NODE_VERSION
+        value: 22.20.0
+      - key: NODE_ENV
+        value: production
+      # Render generates a strong secret. Never commit a real value.
+      - key: SESSION_SECRET
+        generateValue: true
+      - key: DATABASE_URL
+        fromDatabase:
+          name: tulivu-db
+          property: connectionString
+      # SQL migrations run automatically at boot against this database.
+      - key: ADAPTER_MODE
+        value: demo
+      - key: MODEL_PROVIDER
+        value: mock
+      - key: IMAGE_PROVIDER
+        value: mock
+      - key: WEB_RESEARCH_PROVIDER
+        value: mock
+      - key: WORKFLOW_INLINE
+        value: "false"
+      - key: RATE_LIMIT_MAX
+        value: "120"
+      # Note: the default filesystem is ephemeral. SVG creatives are
+      # also stored in PostgreSQL, so the demo survives a redeploy. Add a disk
+      # mounted at /var/tulivu and set DATA_DIR=/var/tulivu if you enable live
+      # image generation and need binary assets to persist.

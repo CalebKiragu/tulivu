@@ -1,0 +1,19 @@
+{
+  "name": "tulivu",
+  "version": "0.1.0",
+  "private": true,
+  "packageManager": "pnpm@10.18.0",
+  "engines": {
+    "node": ">=20.19.0"
+  },
+  "scripts": {
+    "dev": "pnpm --filter @tulivu/web dev",
+    "build": "pnpm --filter @tulivu/web build",
+    "start": "pnpm --filter @tulivu/web start",
+    "typecheck": "pnpm -r typecheck",
+    "test": "pnpm --filter @tulivu/web test",
+    "test:watch": "pnpm --filter @tulivu/web test:watch",
+    "db:generate": "pnpm --filter @tulivu/web db:generate",
+    "demo:reset": "pnpm --filter @tulivu/web demo:reset"
+  }
+}
