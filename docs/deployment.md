@@ -19,21 +19,33 @@ The repository includes [`render.yaml`](../render.yaml).
 - `DATABASE_URL` wired from the database.
 - Mock model, mock image, mock research and demo ad adapter defaults.
 - Health check at `/api/health`.
-- Build: `corepack enable && pnpm install --frozen-lockfile && pnpm build`.
+- `PUBLIC_BASE_URL` wired from Render's `RENDER_EXTERNAL_URL`.
+- Build: `corepack enable && pnpm install --frozen-lockfile --prod=false && pnpm build`.
 - Start: `pnpm start`.
+
+`--prod=false` matters because `NODE_ENV=production` is set for the service and
+pnpm otherwise omits dev dependencies such as Vite and TypeScript during the
+build. The flag applies only to the build; runtime dependencies are unchanged.
 
 ### Steps
 
 1. Push this repository to GitHub/GitLab/Bitbucket.
-2. In Render, choose **New → Blueprint** and select the repository.
+2. In Render, choose **New → Blueprint** and select the repository, or open
+   <https://render.com/deploy?repo=https://github.com/CalebKiragu/tulivu>.
 3. Review the resources. The blueprint uses free plans for a demo; change them if you need always-on service and durable databases.
 4. Apply. The first deploy installs dependencies, builds the SPA, starts Fastify and runs Drizzle migrations against PostgreSQL.
 5. Open the service URL. The first visit seeds that browser session's private workspace.
 
+No user-supplied secrets are required for the demo. Render generates
+`SESSION_SECRET` and injects `DATABASE_URL`. Do **not** add model, image or
+research API keys unless you deliberately switch the corresponding provider
+from `mock`; the default deployment makes no paid API calls.
+
 ### Free-plan caveats
 
-- Free web services sleep after inactivity; the first request after sleep is slow.
-- Free PostgreSQL instances may expire or have storage/connection limits depending on Render's current terms.
+- Free web services sleep after 15 minutes of inactivity; the first request after sleep takes about a minute.
+- **Free PostgreSQL databases expire 30 days after creation** (with a 14-day upgrade grace period). For a durable public demo, change the database `plan` to a paid plan before or during that window.
+- Only one free PostgreSQL database is allowed per workspace.
 - The filesystem is ephemeral. SVG creatives are stored as text in PostgreSQL, so the seeded demo survives restarts. **Binary images do not.**
 - No persistent disk is attached by default.
 
@@ -42,7 +54,7 @@ The repository includes [`render.yaml`](../render.yaml).
 If `IMAGE_PROVIDER=openai-compatible` and you want generated PNGs to survive a deploy:
 
 1. Add a Render disk mounted at `/var/tulivu`.
-2. Set `DATA_DIR=/var/tulivu`.
+2. Change `DATA_DIR` from `/tmp/tulivu` to `/var/tulivu`.
 3. `ASSETS_DIR` defaults to `/var/tulivu/assets`.
 4. Redeploy.
 

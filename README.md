@@ -178,13 +178,18 @@ The test harness uses in-memory PGlite, temporary data directories, the mock pro
 
 A Render blueprint is included in [render.yaml](render.yaml). It provisions a PostgreSQL database, a Node web service, a generated session secret, and the mock/demo defaults. Migrations run automatically on boot.
 
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/CalebKiragu/tulivu)
+
 See [docs/deployment.md](docs/deployment.md). The short version:
 
-- Build: `pnpm install --frozen-lockfile && pnpm build`
+- Build: `pnpm install --frozen-lockfile --prod=false && pnpm build`
 - Start: `pnpm start`
 - Health check: `/api/health`
 - Required: `SESSION_SECRET` (the blueprint generates one)
 - Optional: `DATABASE_URL` for PostgreSQL; otherwise PGlite is used with an ephemeral filesystem
+
+Render's free PostgreSQL plan expires after 30 days. Upgrade the database plan
+before that if you want the deployment to remain available.
 
 ## Project layout
 

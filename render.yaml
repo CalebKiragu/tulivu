@@ -19,13 +19,15 @@ services:
     runtime: node
     plan: free
     region: oregon
-    buildCommand: corepack enable && pnpm install --frozen-lockfile && pnpm build
+    # NODE_ENV=production makes pnpm omit devDependencies by default. The client
+    # build needs Vite/TypeScript, so install dev dependencies explicitly.
+    buildCommand: corepack enable && pnpm install --frozen-lockfile --prod=false && pnpm build
     startCommand: corepack enable && pnpm start
     healthCheckPath: /api/health
-    autoDeploy: true
+    autoDeployTrigger: commit
     envVars:
       - key: NODE_VERSION
-        value: 22.20.0
+        value: 24.22.1
       - key: NODE_ENV
         value: production
       # Render generates a strong secret. Never commit a real value.
@@ -35,6 +37,17 @@ services:
         fromDatabase:
           name: tulivu-db
           property: connectionString
+      # Render sets RENDER_EXTERNAL_URL at runtime; expose it under the name the
+      # app reads. The demo currently uses relative links, so this is future-proofing.
+      - key: PUBLIC_BASE_URL
+        fromService:
+          name: tulivu
+          type: web
+          envVarKey: RENDER_EXTERNAL_URL
+      # The filesystem is ephemeral on the free plan. PostgreSQL holds all
+      # structured data and SVG creatives; this path is only for binary assets.
+      - key: DATA_DIR
+        value: /tmp/tulivu
       # SQL migrations run automatically at boot against this database.
       - key: ADAPTER_MODE
         value: demo
