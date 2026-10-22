@@ -21,8 +21,10 @@ services:
     region: oregon
     # NODE_ENV=production makes pnpm omit devDependencies by default. The client
     # build needs Vite/TypeScript, so install dev dependencies explicitly.
-    buildCommand: corepack enable && pnpm install --frozen-lockfile --prod=false && pnpm build
-    startCommand: corepack enable && pnpm start
+    # Render's Node image ships pnpm at /usr/bin/pnpm. Running `corepack enable`
+    # here fails because that path is read-only, so invoke pnpm directly.
+    buildCommand: pnpm install --frozen-lockfile --prod=false && pnpm build
+    startCommand: pnpm start
     healthCheckPath: /api/health
     autoDeployTrigger: commit
     envVars:

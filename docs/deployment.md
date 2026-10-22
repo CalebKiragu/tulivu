@@ -20,8 +20,12 @@ The repository includes [`render.yaml`](../render.yaml).
 - Mock model, mock image, mock research and demo ad adapter defaults.
 - Health check at `/api/health`.
 - `PUBLIC_BASE_URL` wired from Render's `RENDER_EXTERNAL_URL`.
-- Build: `corepack enable && pnpm install --frozen-lockfile --prod=false && pnpm build`.
+- Build: `pnpm install --frozen-lockfile --prod=false && pnpm build`.
 - Start: `pnpm start`.
+
+Render's Node image already provides `pnpm` at `/usr/bin/pnpm`. Do not run
+`corepack enable` in the build command: that path is read-only and fails with
+`EROFS: read-only file system`.
 
 `--prod=false` matters because `NODE_ENV=production` is set for the service and
 pnpm otherwise omits dev dependencies such as Vite and TypeScript during the
