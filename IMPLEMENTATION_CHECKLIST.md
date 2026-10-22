@@ -151,6 +151,10 @@ Status as of the final verification pass. Checked items are implemented and exer
 - [x] Backend smoke flow: seeded workspace → eight stages → quality warning → approval → simulated launch → duplicate launch → export.
 - [x] Production-style server serves API and SPA fallback.
 - [x] Confirmed no live platform credentials or network publishing path is active by default.
+- [x] `render blueprints validate render.yaml` passes against the Render schema and plan validator.
+- [x] Deployed to Render at <https://tulivu.onrender.com> with PostgreSQL, generated `SESSION_SECRET`, mock providers and the demo adapter.
+- [x] Live deployed smoke test: eight stages completed → quality `warn` (90) → warning acknowledged → approval → two simulated `PAUSED` operations.
+- [x] Render build uses the Node image's preinstalled pnpm and installs dev dependencies for the client build.
 
 ## 11. Deliberately deferred (with rationale)
 
