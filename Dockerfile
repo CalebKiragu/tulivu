@@ -23,7 +23,8 @@ ENV NODE_ENV=production
 ENV PORT=8787
 EXPOSE 8787
 
+# Run the API directly so the container does not depend on corepack at runtime.
 # Do not run the API as root.
 USER node
 
-CMD ["pnpm", "start"]
+CMD ["/app/apps/web/node_modules/.bin/tsx", "/app/apps/web/server/index.ts"]
