@@ -1,19 +1,26 @@
 import { useEffect, useState, type ComponentType } from "react";
-import { Link, NavLink, Outlet, useLocation } from "react-router-dom";
+import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import {
   Activity,
   Building2,
+  Calendar,
+  CalendarDays,
   ChevronRight,
   LayoutDashboard,
+  LogOut,
   Megaphone,
   Menu,
   Palette,
   Plus,
+  Scissors,
   Settings,
   ShieldCheck,
+  Users,
+  UserRound,
   X,
 } from "lucide-react";
 import { cn } from "@tulivu/shared";
+import { useAuth, useConfig, useLogout } from "@/lib/queries";
 import { Wordmark, LeafMark } from "./brand";
 import { Badge, buttonClass, IconButton } from "./ui";
 import { useOverview } from "@/lib/queries";
@@ -28,6 +35,11 @@ interface NavItem {
 function navItems(awaitingApproval: number): NavItem[] {
   return [
     { to: "/app/overview", label: "Overview", icon: LayoutDashboard },
+    { to: "/app/calendar", label: "Calendar", icon: Calendar },
+    { to: "/app/bookings", label: "Bookings", icon: CalendarDays },
+    { to: "/app/customers", label: "Customers", icon: Users },
+    { to: "/app/services", label: "Services", icon: Scissors },
+    { to: "/app/team", label: "Team & Hours", icon: UserRound },
     { to: "/app/businesses", label: "Businesses", icon: Building2 },
     { to: "/app/campaigns", label: "Campaigns", icon: Megaphone, badge: awaitingApproval },
     { to: "/app/studio", label: "Creative studio", icon: Palette },
@@ -45,8 +57,13 @@ export function ScrollToTop() {
 
 function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   const overview = useOverview();
+  const config = useConfig();
+  const authRequired = config.data?.config.authMode === "required";
+  const auth = useAuth(authRequired);
   const waiting = overview.data?.metrics.awaitingApproval ?? 0;
-  const workspaceName = overview.data?.workspace.name ?? "Demo workspace";
+  const workspaceName = authRequired
+    ? auth.data?.auth.organization.name ?? "Private workspace"
+    : overview.data?.workspace.name ?? "Demo workspace";
 
   return (
     <div className="flex h-full flex-col">
@@ -61,7 +78,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
         <p className="mt-1 truncate text-sm font-semibold text-ivory/90">{workspaceName}</p>
         <div className="mt-2 flex items-center gap-1.5 text-[10px] font-medium text-gold/90">
           <span className="h-1.5 w-1.5 rounded-full bg-gold" aria-hidden />
-          Demo · isolated session
+          {authRequired ? "Account · tenant scoped" : "Demo · isolated session"}
         </div>
       </div>
 
@@ -136,6 +153,11 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
 
 function pageLabel(pathname: string): string {
   if (pathname === "/app/overview") return "Overview";
+  if (pathname === "/app/calendar") return "Calendar";
+  if (pathname === "/app/bookings") return "Bookings";
+  if (pathname === "/app/customers") return "Customers";
+  if (pathname === "/app/services") return "Services";
+  if (pathname === "/app/team") return "Team & Hours";
   if (pathname.startsWith("/app/businesses")) return "Businesses";
   if (pathname === "/app/campaigns/new") return "New campaign";
   if (pathname.startsWith("/app/campaigns/")) return "Campaign workspace";
@@ -149,7 +171,12 @@ function pageLabel(pathname: string): string {
 export function AppShell() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
   const label = pageLabel(location.pathname);
+  const config = useConfig();
+  const authRequired = config.data?.config.authMode === "required";
+  const auth = useAuth(authRequired);
+  const logout = useLogout();
 
   useEffect(() => {
     setMobileOpen(false);
@@ -212,10 +239,33 @@ export function AppShell() {
             </div>
 
             <div className="flex items-center gap-2.5">
-              <Badge tone="gold" className="hidden sm:inline-flex">
-                <span className="h-1.5 w-1.5 rounded-full bg-gold-deep" aria-hidden />
-                Demo mode
-              </Badge>
+              {!authRequired ? (
+                <Badge tone="gold" className="hidden sm:inline-flex">
+                  <span className="h-1.5 w-1.5 rounded-full bg-gold-deep" aria-hidden />
+                  Demo mode
+                </Badge>
+              ) : auth.data ? (
+                <div className="flex items-center gap-2">
+                  <span className="hidden max-w-[180px] truncate text-xs font-semibold text-forest sm:inline">
+                    {auth.data.auth.user.displayName}
+                  </span>
+                  <IconButton
+                    label="Sign out"
+                    onClick={() =>
+                      logout.mutate(undefined, {
+                        onSuccess: () => navigate("/auth", { replace: true }),
+                      })
+                    }
+                    disabled={logout.isPending}
+                  >
+                    <LogOut className="h-4 w-4" aria-hidden />
+                  </IconButton>
+                </div>
+              ) : (
+                <Link to="/auth" className={buttonClass({ variant: "secondary", size: "md", className: "h-9 px-3.5" })}>
+                  Sign in
+                </Link>
+              )}
               <Link to="/app/campaigns/new" className={buttonClass({ size: "md", className: "h-9 px-3.5" })}>
                 <Plus className="h-4 w-4" aria-hidden />
                 <span className="hidden xs:inline sm:inline">New campaign</span>
@@ -229,7 +279,9 @@ export function AppShell() {
         </main>
 
         <footer className="mx-auto flex w-full max-w-[1280px] flex-wrap items-center justify-between gap-2 px-4 pb-8 pt-2 text-[10px] text-muted sm:px-6 lg:px-10">
-          <span>tulivu · demo workspace · no live advertising accounts connected</span>
+          <span>
+            tulivu · {authRequired ? auth.data?.auth.organization.name ?? "private workspace" : "demo workspace"} · no live advertising accounts connected
+          </span>
           <span>Strategy to review, with a human approval gate.</span>
         </footer>
       </div>

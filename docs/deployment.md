@@ -17,6 +17,7 @@ The repository includes [`render.yaml`](../render.yaml).
 - A Node web service named `tulivu`.
 - A generated `SESSION_SECRET`.
 - `DATABASE_URL` wired from the database.
+- `AUTH_MODE=demo` by default (zero-login workspace; see below).
 - Mock model, mock image, mock research and demo ad adapter defaults.
 - Health check at `/api/health`.
 - `PUBLIC_BASE_URL` wired from Render's `RENDER_EXTERNAL_URL`.
@@ -116,6 +117,7 @@ The pool then uses `ssl: { rejectUnauthorized: false }`. If your provider suppli
 - They are applied automatically at startup with Drizzle's migrator.
 - Keep migration files in version control.
 - For zero-downtime production changes, apply migrations as a separate release step and make them backward-compatible. Automatic boot migrations are acceptable for this demo.
+- Local PGlite data can get out of sync with the migration journal after old manual runs. If startup reports that a table already exists, remove the local `DATA_DIR` (or run `pnpm demo:reset`) and restart. Do not do this against a database you need to keep.
 
 ### Reverse proxy checklist
 
@@ -131,6 +133,7 @@ The pool then uses `ssl: { rejectUnauthorized: false }`. If your provider suppli
 | --- | --- |
 | `NODE_ENV` | `production` |
 | `SESSION_SECRET` | **Required.** At least 32 random characters. Startup fails without it. |
+| `AUTH_MODE` | `demo` (default) or `required`. Keep `demo` until real accounts exist. |
 | `DATABASE_URL` | Strongly recommended. Without it the app uses PGlite on local disk. |
 | `PGSSL` | `true` only if the database requires TLS |
 | `PORT` | Usually injected by the platform |
@@ -143,6 +146,24 @@ The pool then uses `ssl: { rejectUnauthorized: false }`. If your provider suppli
 | `RATE_LIMIT_MAX` | Tune for expected traffic |
 
 See [`.env.example`](../.env.example) and [provider-configuration.md](provider-configuration.md).
+
+### Enabling required auth
+
+The backend supports real accounts, organizations and memberships, but the
+public demo stays zero-login until you opt in:
+
+1. Keep `AUTH_MODE=demo` on the first deploy so the migration and seed can run.
+2. Create the first owner with `POST /api/auth/register` (or the `/auth` page).
+3. Verify `/api/auth/me` returns that owner, then set `AUTH_MODE=required` on the
+   service and redeploy.
+4. All `/api` routes except `/api/health`, `/api/config` and `/api/auth/*` then
+   require a session. The client shows `/auth` and a sign-out control
+   automatically.
+
+Existing demo workspaces created without an account are **not** migrated into
+an organization. Export any data you need before switching, or create the
+matching organization manually. Do not enable `required` in production until
+an owner account exists, or you will lock yourself out.
 
 ## Health and observability
 
@@ -192,6 +213,7 @@ Therefore run **one instance** with PostgreSQL for a demo. To scale horizontally
 - [ ] `NODE_ENV=production`.
 - [ ] `DATABASE_URL` points at a backed-up PostgreSQL instance.
 - [ ] `ADAPTER_MODE=demo` until a real adapter is implemented and reviewed.
+- [ ] `AUTH_MODE` is deliberate: `demo` for the public demo, `required` only after an owner account exists.
 - [ ] No live model/image/research keys are exposed to the browser.
 - [ ] Provider keys have budgets and least privilege.
 - [ ] The deployment is a **single instance** unless the scaling work above is done.

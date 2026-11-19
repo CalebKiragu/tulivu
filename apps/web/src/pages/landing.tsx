@@ -162,6 +162,12 @@ export default function LandingPage() {
           </nav>
           <div className="flex items-center gap-2">
             <Link
+              to="/auth"
+              className={buttonClass({ variant: "secondary", size: "md", className: "h-9 px-3.5 text-xs sm:px-4" })}
+            >
+              Sign in
+            </Link>
+            <Link
               to="/app/overview"
               className={buttonClass({ size: "md", className: "h-9 px-3.5 text-xs sm:px-4" })}
             >
