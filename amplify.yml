@@ -13,7 +13,7 @@ frontend:
         - /tmp/tulivu-pnpm/bin/pnpm install --frozen-lockfile --prod=false --prefer-offline
     build:
       commands:
-        - /tmp/tulivu-pnpm/bin/pnpm build
+        - PATH="/tmp/tulivu-pnpm/bin:$PATH" /tmp/tulivu-pnpm/bin/pnpm build
   artifacts:
     baseDirectory: apps/web/dist/client
     files:
