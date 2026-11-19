@@ -76,14 +76,14 @@ A disk pins the service to a single instance. For multi-instance deployments, im
 
 Amplify can build and host `apps/web/dist/client`, but it cannot serve `/api/*`.
 For a static Amplify site to work, set `VITE_API_BASE_URL` in the Amplify build
-environment to the Render service URL, for example:
+environment to the API URL, for example:
 
 ```yaml
 env:
   VITE_API_BASE_URL: https://api.tulivu.menodao.org
 ```
 
-The client will then call Render directly with credentials. The Render service
+The client will then call the API directly with credentials. The API host
 must allow the Amplify origin through `CORS_ORIGIN`. Amplify serves a branch at
 `https://<branch>.<app-id>.amplifyapp.com`; the bare app domain returns 404. The
 blueprint allows both the branch host and the bare host for the default app.
@@ -93,6 +93,26 @@ Add any custom domain to that comma-separated list. Cookies switch to
 If `VITE_API_BASE_URL` is omitted, the client also falls back to
 `https://api.tulivu.menodao.org` when it detects an `*.amplifyapp.com` hostname.
 Set the variable explicitly when pointing a custom domain at a different API.
+
+### Lightsail API host
+
+The API is packaged by the repository `Dockerfile` and runs on the shared
+Lightsail host. To redeploy:
+
+```bash
+git clone https://github.com/CalebKiragu/tulivu.git /home/ubuntu/tulivu
+cd /home/ubuntu/tulivu
+docker build -t tulivu-api:latest .
+docker rm -f tulivu-api
+docker run -d --name tulivu-api --restart unless-stopped \
+  --network menodao --env-file /home/ubuntu/tulivu.env \
+  -p 127.0.0.1:8787:8787 --memory 512m tulivu-api:latest
+```
+
+Caddy terminates TLS for `api.tulivu.menodao.org` and proxies to
+`tulivu-api:8787`. The container uses the shared `menodao-postgres` database
+`tulivu`; migrations run automatically at startup. Keep `AUTH_MODE=demo` until an
+owner account exists.
 
 ## Generic Node host
 
