@@ -16,8 +16,14 @@ RUN pnpm install --frozen-lockfile --prod=false
 # Copy the rest of the source.
 COPY . .
 
+# Runtime state lives under /tmp/tulivu; make it writable by the non-root user.
+RUN mkdir -p /tmp/tulivu/assets && chown -R node:node /tmp/tulivu
+
 ENV NODE_ENV=production
 ENV PORT=8787
 EXPOSE 8787
+
+# Do not run the API as root.
+USER node
 
 CMD ["pnpm", "start"]
