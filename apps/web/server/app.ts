@@ -1,4 +1,4 @@
-import { createHash, randomUUID } from "node:crypto";
+import { createHash, randomBytes, randomUUID } from "node:crypto";
 import { existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { and, desc, eq, inArray, sql } from "drizzle-orm";
@@ -73,6 +73,7 @@ import {
   AuthError,
   createStaffAccount,
   loginAccount,
+  loginOrCreateGoogleAccount,
   registerAccount,
   resolveAuthContext,
   type AuthContext,
@@ -115,6 +116,7 @@ declare module "@fastify/secure-session" {
     ownerId: string;
     userId: string;
     organizationId: string;
+    oauthState?: string;
   }
 }
 
@@ -366,6 +368,79 @@ export async function buildApp({ config, db }: BuildAppOptions): Promise<{
     api.post("/auth/logout", async (request) => {
       request.session.delete();
       return { ok: true };
+    });
+
+    api.get("/auth/google", async (request, reply) => {
+      if (!context.config.google.clientId || !context.config.google.clientSecret) {
+        throw new AuthError("Google sign-in is not configured.", "not_configured", 503);
+      }
+      const state = randomBytes(16).toString("hex");
+      request.session.set("oauthState", state);
+      const callbackUrl =
+        context.config.google.callbackUrl ??
+        `${request.protocol}://${request.host}/api/auth/google/callback`;
+      const params = new URLSearchParams({
+        client_id: context.config.google.clientId,
+        redirect_uri: callbackUrl,
+        response_type: "code",
+        scope: "openid email profile",
+        state,
+        access_type: "offline",
+        prompt: "select_account",
+      });
+      reply.redirect(`https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`);
+    });
+
+    api.get("/auth/google/callback", async (request, reply) => {
+      const query = request.query as { code?: string; state?: string; error?: string };
+      if (query.error) throw new AuthError("Google sign-in was cancelled.", "oauth_cancelled", 400);
+      if (!query.code || !query.state) throw new AuthError("Missing OAuth parameters.", "oauth_invalid", 400);
+      if (!context.config.google.clientId || !context.config.google.clientSecret) {
+        throw new AuthError("Google sign-in is not configured.", "not_configured", 503);
+      }
+      const savedState = request.session.get("oauthState");
+      request.session.set("oauthState", "");
+      if (!savedState || savedState !== query.state) {
+        throw new AuthError("Invalid OAuth state.", "oauth_state_mismatch", 400);
+      }
+
+      const callbackUrl =
+        context.config.google.callbackUrl ??
+        `${request.protocol}://${request.host}/api/auth/google/callback`;
+
+      const tokenRes = await fetch("https://oauth2.googleapis.com/token", {
+        method: "POST",
+        headers: { "content-type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({
+          code: query.code,
+          client_id: context.config.google.clientId,
+          client_secret: context.config.google.clientSecret,
+          redirect_uri: callbackUrl,
+          grant_type: "authorization_code",
+        }),
+      });
+      if (!tokenRes.ok) throw new AuthError("Google token exchange failed.", "oauth_token_error", 502);
+      const tokenData = (await tokenRes.json()) as { access_token: string };
+      const userRes = await fetch("https://openidconnect.googleapis.com/v1/userinfo", {
+        headers: { authorization: `Bearer ${tokenData.access_token}` },
+      });
+      if (!userRes.ok) throw new AuthError("Failed to fetch Google profile.", "oauth_profile_error", 502);
+      const profile = (await userRes.json()) as { sub: string; email: string; name?: string };
+
+      const auth = await loginOrCreateGoogleAccount(context.db, {
+        email: profile.email,
+        displayName: profile.name ?? profile.email.split("@")[0] ?? "User",
+        googleSubject: profile.sub,
+      });
+
+      request.session.set("userId", auth.userId);
+      request.session.set("organizationId", auth.organizationId);
+      request.session.set("ownerId", auth.ownerId);
+
+      const target = context.config.frontendUrl
+        ? `${context.config.frontendUrl.replace(/\/$/, "")}/app/overview`
+        : "/app/overview";
+      reply.redirect(target);
     });
 
     api.get("/auth/me", async (request) => {

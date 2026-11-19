@@ -30,7 +30,13 @@ export interface AppConfig {
   pgliteDir: string;
   sessionSecret: string;
   publicBaseUrl: string | null;
+  frontendUrl: string | null;
   corsOrigins: string[];
+  google: {
+    clientId: string | null;
+    clientSecret: string | null;
+    callbackUrl: string | null;
+  };
   model: {
     provider: "mock" | "openai-compatible";
     baseUrl: string;
@@ -99,6 +105,12 @@ export function loadConfig(overrides: Partial<AppConfig> = {}): AppConfig {
     .split(",")
     .map((origin) => origin.trim())
     .filter(Boolean);
+  const frontendUrl = env("FRONTEND_URL") ?? corsOrigins[0] ?? null;
+  const google = {
+    clientId: env("GOOGLE_CLIENT_ID") ?? null,
+    clientSecret: env("GOOGLE_CLIENT_SECRET") ?? null,
+    callbackUrl: env("GOOGLE_CALLBACK_URL") ?? null,
+  };
   const { secret: sessionSecret } = deriveSessionSecret();
 
   const modelName = env("MODEL_NAME") ?? "mock-tulivu-1";
@@ -120,7 +132,9 @@ export function loadConfig(overrides: Partial<AppConfig> = {}): AppConfig {
     pgliteDir: path.resolve(repoRoot, env("PGLITE_DIR") ?? path.join(dataDir, "pglite")),
     sessionSecret,
     publicBaseUrl: env("PUBLIC_BASE_URL") ?? null,
+    frontendUrl,
     corsOrigins,
+    google,
     model: {
       provider: modelProvider,
       baseUrl: env("MODEL_BASE_URL") ?? "https://api.openai.com/v1",
@@ -166,6 +180,9 @@ export function loadConfig(overrides: Partial<AppConfig> = {}): AppConfig {
   if (config.research.provider === "tavily" && !config.research.apiKey) {
     throw new Error("TAVILY_API_KEY is required when WEB_RESEARCH_PROVIDER=tavily.");
   }
+  if (config.google.clientId && !config.google.clientSecret) {
+    throw new Error("GOOGLE_CLIENT_SECRET is required when GOOGLE_CLIENT_ID is set.");
+  }
 
   return config;
 }
@@ -176,6 +193,7 @@ export function publicConfig(config: AppConfig) {
     demoMode: config.adapterMode === "demo",
     adapterMode: config.adapterMode,
     authMode: config.authMode,
+    googleAuthEnabled: Boolean(config.google.clientId && config.google.clientSecret),
     modelProvider: config.model.provider,
     modelName: config.model.model,
     modelConfigured: config.model.provider === "mock" || Boolean(config.model.apiKey),

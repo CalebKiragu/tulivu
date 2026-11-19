@@ -85,6 +85,7 @@ export interface PublicConfig {
   demoMode: boolean;
   adapterMode: "demo" | "live";
   authMode: "demo" | "required";
+  googleAuthEnabled?: boolean;
   modelProvider: string;
   modelName: string;
   modelConfigured: boolean;

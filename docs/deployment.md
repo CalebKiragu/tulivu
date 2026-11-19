@@ -180,9 +180,15 @@ The pool then uses `ssl: { rejectUnauthorized: false }`. If your provider suppli
 | `PGSSL` | `true` only if the database requires TLS |
 | `PORT` | Usually injected by the platform |
 | `CORS_ORIGIN` | Comma-separated origins if the frontend is hosted separately from the API |
+| `FRONTEND_URL` | Frontend base URL used for OAuth redirects (defaults to first CORS origin) |
+| `GOOGLE_CLIENT_ID` | Google OAuth client ID (optional; enables "Sign in with Google") |
+| `GOOGLE_CLIENT_SECRET` | Google OAuth client secret (required if client ID is set) |
+| `GOOGLE_CALLBACK_URL` | Optional override for the Google OAuth callback URL |
 | `ADAPTER_MODE` | Keep `demo`; live adapters are stubs |
 | `MODEL_PROVIDER` | `mock` or `openai-compatible` |
+| `MODEL_BASE_URL` | API base URL (default OpenAI; use Gemini's OpenAI-compatible endpoint for Gemini) |
 | `MODEL_API_KEY` | Required when `MODEL_PROVIDER=openai-compatible` |
+| `IMAGE_BASE_URL` | Image provider base URL (defaults to MODEL_BASE_URL) |
 | `IMAGE_PROVIDER` | `mock` or `openai-compatible` |
 | `WEB_RESEARCH_PROVIDER` | `mock` or `tavily` |
 | `DATA_DIR` | Writable path if assets/images are used |

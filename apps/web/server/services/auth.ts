@@ -126,6 +126,61 @@ export async function registerAccount(
   };
 }
 
+export async function loginOrCreateGoogleAccount(
+  db: Database,
+  input: { email: string; displayName: string; googleSubject: string },
+): Promise<AuthContext> {
+  const email = normalizeEmail(input.email);
+  const displayName = input.displayName.trim() || email.split("@")[0] || "User";
+  const [existing] = await db.select().from(users).where(eq(users.email, email)).limit(1);
+  if (existing) {
+    return resolveAuthContext(db, existing.id);
+  }
+
+  const userId = randomUUID();
+  const organizationName = displayName ? `${displayName}'s workspace` : "My workspace";
+  const organizationId = randomUUID();
+  const slug = await uniqueOrgSlug(db, organizationName);
+
+  await db.transaction(async (tx) => {
+    await tx.insert(users).values({
+      id: userId,
+      email,
+      displayName,
+      passwordHash: null,
+    });
+    await tx.insert(organizations).values({
+      id: organizationId,
+      ownerId: userId,
+      name: organizationName,
+      slug,
+      timezone: "Africa/Nairobi",
+      defaultCurrency: "KES",
+    });
+    await tx.insert(organizationMembers).values({
+      id: randomUUID(),
+      organizationId,
+      userId,
+      role: "owner",
+    });
+  });
+
+  return {
+    userId,
+    organizationId,
+    ownerId: userId,
+    role: "owner",
+    user: { id: userId, email, displayName },
+    organization: {
+      id: organizationId,
+      name: organizationName,
+      slug,
+      timezone: "Africa/Nairobi",
+      ownerId: userId,
+    },
+  };
+}
+
 export async function loginAccount(db: Database, input: { email: string; password: string }): Promise<AuthContext> {
   const email = normalizeEmail(input.email);
   const [user] = await db.select().from(users).where(eq(users.email, email)).limit(1);
