@@ -35,7 +35,11 @@ function headersFor(init: RequestInit): Headers {
   return headers;
 }
 
-const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL ?? "").replace(/\/$/, "");
+const amplifyHostedApi =
+  typeof window !== "undefined" && window.location.hostname.endsWith(".amplifyapp.com")
+    ? "https://tulivu.onrender.com"
+    : "";
+const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL ?? amplifyHostedApi).replace(/\/$/, "");
 
 export function apiUrl(path: string): string {
   return `${API_BASE_URL}${path}`;
