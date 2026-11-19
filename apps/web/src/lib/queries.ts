@@ -6,7 +6,7 @@ import {
   type QueryClient,
 } from "@tanstack/react-query";
 import type { ArtifactType, BusinessInput, CampaignBriefInput } from "@tulivu/shared";
-import { api } from "./api";
+import { api, apiUrl } from "./api";
 
 export const queryKeys = {
   config: ["config"] as const,
@@ -319,7 +319,9 @@ export function useCampaignEvents(campaignId: string | undefined, enabled = true
     if (!campaignId || !enabled || typeof window === "undefined") return;
 
     let cancelled = false;
-    const source = new EventSource(`/api/campaigns/${campaignId}/events`);
+    const source = new EventSource(apiUrl(`/api/campaigns/${campaignId}/events`), {
+      withCredentials: true,
+    });
 
     const scheduleInvalidate = () => {
       if (timeout.current) clearTimeout(timeout.current);

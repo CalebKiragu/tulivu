@@ -30,6 +30,7 @@ export interface AppConfig {
   pgliteDir: string;
   sessionSecret: string;
   publicBaseUrl: string | null;
+  corsOrigins: string[];
   model: {
     provider: "mock" | "openai-compatible";
     baseUrl: string;
@@ -94,6 +95,10 @@ export function loadConfig(overrides: Partial<AppConfig> = {}): AppConfig {
   const researchProvider = (env("WEB_RESEARCH_PROVIDER") ?? "mock") as AppConfig["research"]["provider"];
   const adapterMode = (env("ADAPTER_MODE") ?? "demo") as AppConfig["adapterMode"];
   const authMode = (env("AUTH_MODE") ?? "demo") as AppConfig["authMode"];
+  const corsOrigins = (env("CORS_ORIGIN") ?? "")
+    .split(",")
+    .map((origin) => origin.trim())
+    .filter(Boolean);
   const { secret: sessionSecret } = deriveSessionSecret();
 
   const modelName = env("MODEL_NAME") ?? "mock-tulivu-1";
@@ -115,6 +120,7 @@ export function loadConfig(overrides: Partial<AppConfig> = {}): AppConfig {
     pgliteDir: path.resolve(repoRoot, env("PGLITE_DIR") ?? path.join(dataDir, "pglite")),
     sessionSecret,
     publicBaseUrl: env("PUBLIC_BASE_URL") ?? null,
+    corsOrigins,
     model: {
       provider: modelProvider,
       baseUrl: env("MODEL_BASE_URL") ?? "https://api.openai.com/v1",

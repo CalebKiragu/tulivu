@@ -39,7 +39,7 @@ For a real deployment, add an identity provider, server-side sessions or short-l
 - Asset responses add a restrictive `Content-Security-Policy` and `Content-Disposition: inline`.
 - Request bodies are capped at 1 MiB.
 - Rate limiting is global at 120 requests/minute per client; tests raise it temporarily.
-- Same-origin API, no permissive CORS. State-changing routes use JSON bodies; `SameSite=Lax` plus the JSON content type materially reduces classic CSRF. There is no CSRF token, which is acceptable for a demo but should be revisited for real accounts.
+- Same-origin API by default. When a separate static frontend is used, `CORS_ORIGIN` is an explicit allowlist with credentials; cookies then use `SameSite=None; Secure`. State-changing routes use JSON bodies, which materially reduces classic CSRF. There is no CSRF token, which is acceptable for a demo but should be revisited for real accounts.
 
 A full Content-Security-Policy for the SPA is not set because the app uses inline styles and the Vite development server. Add and test one before treating the app as hardened.
 

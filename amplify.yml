@@ -1,4 +1,6 @@
 version: 1
+env:
+  VITE_API_BASE_URL: https://tulivu.onrender.com
 frontend:
   phases:
     preBuild:

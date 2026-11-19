@@ -35,9 +35,15 @@ function headersFor(init: RequestInit): Headers {
   return headers;
 }
 
+const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL ?? "").replace(/\/$/, "");
+
+export function apiUrl(path: string): string {
+  return `${API_BASE_URL}${path}`;
+}
+
 async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
-  const response = await fetch(path, {
-    credentials: "same-origin",
+  const response = await fetch(apiUrl(path), {
+    credentials: API_BASE_URL ? "include" : "same-origin",
     ...init,
     headers: headersFor(init),
   });
@@ -486,8 +492,8 @@ export async function downloadCampaignExport(
   format: "markdown" | "json",
   filenameHint: string,
 ): Promise<void> {
-  const response = await fetch(`/api/campaigns/${campaignId}/export?format=${format}`, {
-    credentials: "same-origin",
+  const response = await fetch(apiUrl(`/api/campaigns/${campaignId}/export?format=${format}`), {
+    credentials: API_BASE_URL ? "include" : "same-origin",
   });
   if (!response.ok) {
     let message = "The campaign export could not be generated.";

@@ -72,6 +72,23 @@ A disk pins the service to a single instance. For multi-instance deployments, im
 - `PUBLIC_BASE_URL` is reserved for future absolute links and is not required today.
 - If you place the app behind a proxy, keep forwarded headers enabled. Fastify is configured with `trustProxy: true`.
 
+### Amplify static frontend
+
+Amplify can build and host `apps/web/dist/client`, but it cannot serve `/api/*`.
+For a static Amplify site to work, set `VITE_API_BASE_URL` in the Amplify build
+environment to the Render service URL, for example:
+
+```yaml
+env:
+  VITE_API_BASE_URL: https://tulivu.onrender.com
+```
+
+The client will then call Render directly with credentials. The Render service
+must allow the Amplify origin through `CORS_ORIGIN`; the blueprint sets this for
+the default `*.amplifyapp.com` domain. Add any custom domain to that
+comma-separated list. Cookies switch to `SameSite=None; Secure` automatically
+when `CORS_ORIGIN` is set.
+
 ## Generic Node host
 
 Requirements:
@@ -137,6 +154,7 @@ The pool then uses `ssl: { rejectUnauthorized: false }`. If your provider suppli
 | `DATABASE_URL` | Strongly recommended. Without it the app uses PGlite on local disk. |
 | `PGSSL` | `true` only if the database requires TLS |
 | `PORT` | Usually injected by the platform |
+| `CORS_ORIGIN` | Comma-separated origins if the frontend is hosted separately from the API |
 | `ADAPTER_MODE` | Keep `demo`; live adapters are stubs |
 | `MODEL_PROVIDER` | `mock` or `openai-compatible` |
 | `MODEL_API_KEY` | Required when `MODEL_PROVIDER=openai-compatible` |

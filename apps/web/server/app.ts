@@ -179,6 +179,20 @@ export async function buildApp({ config, db }: BuildAppOptions): Promise<{
   const context = createAppContext(config, db);
   const seededOwners = new Set<string>();
 
+  if (config.corsOrigins.length > 0) {
+    app.addHook("onRequest", async (request, reply) => {
+      const origin = request.headers.origin;
+      if (typeof origin !== "string" || !config.corsOrigins.includes(origin)) return;
+      reply
+        .header("Access-Control-Allow-Origin", origin)
+        .header("Access-Control-Allow-Credentials", "true")
+        .header("Access-Control-Allow-Methods", "GET, POST, PATCH, PUT, DELETE, OPTIONS")
+        .header("Access-Control-Allow-Headers", "content-type, accept")
+        .header("Vary", "Origin");
+      if (request.method === "OPTIONS") await reply.code(204).send();
+    });
+  }
+
   await app.register(rateLimit, {
     global: true,
     max: config.rateLimitMax,
@@ -191,8 +205,8 @@ export async function buildApp({ config, db }: BuildAppOptions): Promise<{
     cookie: {
       path: "/",
       httpOnly: true,
-      sameSite: "lax",
-      secure: config.isProduction,
+      sameSite: config.corsOrigins.length > 0 ? "none" : "lax",
+      secure: config.isProduction || config.corsOrigins.length > 0,
       maxAge: 60 * 60 * 24 * 30,
     },
   });
