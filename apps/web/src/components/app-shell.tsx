@@ -58,7 +58,7 @@ export function ScrollToTop() {
 function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   const overview = useOverview();
   const config = useConfig();
-  const authRequired = config.data?.config.authMode === "required";
+  const authRequired = config.data?.config?.authMode === "required";
   const auth = useAuth(authRequired);
   const waiting = overview.data?.metrics.awaitingApproval ?? 0;
   const workspaceName = authRequired
@@ -174,7 +174,7 @@ export function AppShell() {
   const navigate = useNavigate();
   const label = pageLabel(location.pathname);
   const config = useConfig();
-  const authRequired = config.data?.config.authMode === "required";
+  const authRequired = config.data?.config?.authMode === "required";
   const auth = useAuth(authRequired);
   const logout = useLogout();
 

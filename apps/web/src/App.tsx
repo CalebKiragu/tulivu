@@ -34,7 +34,7 @@ function RouteFallback() {
 
 function WorkspaceRoutes() {
   const config = useConfig();
-  const authRequired = config.data?.config.authMode === "required";
+  const authRequired = config.data?.config?.authMode === "required";
   const auth = useAuth(authRequired);
 
   if (authRequired && (config.isLoading || auth.isLoading)) return <RouteFallback />;
