@@ -3,14 +3,18 @@ import { Link, NavLink, Outlet, useLocation } from "react-router-dom";
 import {
   Activity,
   Building2,
+  Calendar,
   ChevronRight,
   LayoutDashboard,
   Megaphone,
   Menu,
   Palette,
   Plus,
+  Scissors,
   Settings,
   ShieldCheck,
+  Users,
+  UserRound,
   X,
 } from "lucide-react";
 import { cn } from "@tulivu/shared";
@@ -28,6 +32,11 @@ interface NavItem {
 function navItems(awaitingApproval: number): NavItem[] {
   return [
     { to: "/app/overview", label: "Overview", icon: LayoutDashboard },
+    { to: "/app/calendar", label: "Calendar", icon: Calendar },
+    { to: "/app/bookings", label: "Bookings", icon: Calendar },
+    { to: "/app/customers", label: "Customers", icon: Users },
+    { to: "/app/services", label: "Services", icon: Scissors },
+    { to: "/app/team", label: "Team & Hours", icon: UserRound },
     { to: "/app/businesses", label: "Businesses", icon: Building2 },
     { to: "/app/campaigns", label: "Campaigns", icon: Megaphone, badge: awaitingApproval },
     { to: "/app/studio", label: "Creative studio", icon: Palette },
@@ -136,6 +145,11 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
 
 function pageLabel(pathname: string): string {
   if (pathname === "/app/overview") return "Overview";
+  if (pathname === "/app/calendar") return "Calendar";
+  if (pathname === "/app/bookings") return "Bookings";
+  if (pathname === "/app/customers") return "Customers";
+  if (pathname === "/app/services") return "Services";
+  if (pathname === "/app/team") return "Team & Hours";
   if (pathname.startsWith("/app/businesses")) return "Businesses";
   if (pathname === "/app/campaigns/new") return "New campaign";
   if (pathname.startsWith("/app/campaigns/")) return "Campaign workspace";

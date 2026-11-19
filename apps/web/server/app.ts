@@ -69,16 +69,52 @@ import { ensureDemoWorkspace } from "./services/seed.js";
 import { saveArtifact } from "./services/audit.js";
 import { recordAudit } from "./services/audit.js";
 import { WorkflowError } from "./workflow/engine.js";
+import {
+  AuthError,
+  createStaffAccount,
+  loginAccount,
+  registerAccount,
+  resolveAuthContext,
+  type AuthContext,
+} from "./services/auth.js";
+import {
+  OperationsError,
+  bookingStatusSchema,
+  createBooking,
+  createBookingSchema,
+  createCustomer,
+  createCustomerSchema,
+  createService,
+  createServiceSchema,
+  createStaff,
+  createStaffSchema,
+  getCalendar,
+  listBookings,
+  listBusinessHours,
+  listBookingStatusHistory,
+  listCustomers,
+  listServices,
+  listStaff,
+  recordConsent,
+  rescheduleBooking,
+  rescheduleBookingSchema,
+  saveBusinessHours,
+  updateBookingStatus,
+  hoursSchema,
+} from "./services/operations.js";
 
 declare module "fastify" {
   interface FastifyRequest {
     ownerId: string;
+    authContext?: AuthContext;
   }
 }
 
 declare module "@fastify/secure-session" {
   interface SessionData {
     ownerId: string;
+    userId: string;
+    organizationId: string;
   }
 }
 
@@ -180,7 +216,13 @@ export async function buildApp({ config, db }: BuildAppOptions): Promise<{
         },
       });
     }
-    if (error instanceof ApprovalError || error instanceof ExecutionError || error instanceof WorkflowError) {
+    if (
+      error instanceof ApprovalError ||
+      error instanceof ExecutionError ||
+      error instanceof WorkflowError ||
+      error instanceof AuthError ||
+      error instanceof OperationsError
+    ) {
       return reply.status(error.statusCode).send({
         error: { code: error.code, message: error.message, requestId: request.id },
       });
@@ -214,17 +256,47 @@ export async function buildApp({ config, db }: BuildAppOptions): Promise<{
     });
   });
 
+  const publicAuthPaths = new Set([
+    "/api/health",
+    "/api/config",
+    "/api/auth/register",
+    "/api/auth/login",
+  ]);
+
   await app.register(async (api) => {
     api.addHook("preHandler", async (request) => {
-      let ownerId = request.session.get("ownerId");
-      if (typeof ownerId !== "string" || !ownerId) {
-        ownerId = randomUUID();
-        request.session.set("ownerId", ownerId);
+      const path = request.url.split("?")[0] ?? request.url;
+      const isPublicPath = publicAuthPaths.has(path);
+      const sessionUserId = request.session.get("userId");
+      const sessionOrganizationId = request.session.get("organizationId");
+
+      if (sessionUserId) {
+        try {
+          const authContext = await resolveAuthContext(db, sessionUserId, sessionOrganizationId);
+          request.authContext = authContext;
+          request.ownerId = authContext.ownerId;
+          request.session.set("organizationId", authContext.organizationId);
+        } catch (error) {
+          request.session.delete();
+          if (config.authMode === "required" && !isPublicPath) throw error;
+        }
       }
-      request.ownerId = ownerId;
-      if (!seededOwners.has(ownerId) && request.url !== "/api/health") {
-        await ensureDemoWorkspace(db, ownerId);
-        seededOwners.add(ownerId);
+
+      if (!request.ownerId) {
+        if (config.authMode === "required" && !isPublicPath) {
+          throw new AuthError("Sign in to continue.", "unauthorized", 401);
+        }
+        let ownerId = request.session.get("ownerId");
+        if (typeof ownerId !== "string" || !ownerId) {
+          ownerId = randomUUID();
+          request.session.set("ownerId", ownerId);
+        }
+        request.ownerId = ownerId;
+      }
+
+      if (!isPublicPath && !seededOwners.has(request.ownerId)) {
+        await ensureDemoWorkspace(db, request.ownerId);
+        seededOwners.add(request.ownerId);
       }
     });
 
@@ -244,6 +316,64 @@ export async function buildApp({ config, db }: BuildAppOptions): Promise<{
       stages: WORKFLOW_STAGES,
       platformSpecs: PLATFORM_SPECS,
     }));
+
+    /* --------------------------------- auth --------------------------------- */
+    api.post("/auth/register", async (request, reply) => {
+      const body = parse(
+        z.object({
+          email: z.string().trim().email(),
+          password: z.string().min(10).max(200),
+          displayName: z.string().trim().min(1).max(120),
+          organizationName: z.string().trim().min(1).max(120),
+          timezone: z.string().trim().min(1).max(80).optional(),
+        }),
+        request.body,
+      );
+      const auth = await registerAccount(context.db, body);
+      request.session.set("userId", auth.userId);
+      request.session.set("organizationId", auth.organizationId);
+      request.session.set("ownerId", auth.ownerId);
+      reply.status(201);
+      return { auth };
+    });
+
+    api.post("/auth/login", async (request) => {
+      const body = parse(
+        z.object({ email: z.string().trim().email(), password: z.string().min(1).max(200) }),
+        request.body,
+      );
+      const auth = await loginAccount(context.db, body);
+      request.session.set("userId", auth.userId);
+      request.session.set("organizationId", auth.organizationId);
+      request.session.set("ownerId", auth.ownerId);
+      return { auth };
+    });
+
+    api.post("/auth/logout", async (request) => {
+      request.session.delete();
+      return { ok: true };
+    });
+
+    api.get("/auth/me", async (request) => {
+      if (!request.authContext) throw new AuthError("Sign in to continue.", "unauthorized", 401);
+      return { auth: request.authContext };
+    });
+
+    api.post("/auth/staff", async (request, reply) => {
+      if (!request.authContext) throw new AuthError("Sign in to continue.", "unauthorized", 401);
+      const body = parse(
+        z.object({
+          email: z.string().trim().email(),
+          password: z.string().min(10).max(200),
+          displayName: z.string().trim().min(1).max(120),
+          role: z.enum(["admin", "staff", "viewer"]).optional(),
+        }),
+        request.body,
+      );
+      const member = await createStaffAccount(context.db, request.authContext, body);
+      reply.status(201);
+      return { member };
+    });
 
     api.get("/overview", async (request) => {
       const overview = await getOverview(db, request.ownerId);
@@ -790,6 +920,188 @@ export async function buildApp({ config, db }: BuildAppOptions): Promise<{
       }
       return { mode: context.platforms.mode, capabilities };
     });
+
+  /* ----------------------------- Operations ----------------------------- */
+  const requestedBusinessId = (request: FastifyRequest): string | undefined => {
+    const value = (request.query as Record<string, unknown> | undefined)?.businessId;
+    return typeof value === "string" && value ? parse(z.string().uuid(), value) : undefined;
+  };
+
+  api.get("/operations/customers", async (request) => ({
+    customers: await listCustomers(context.db, request.ownerId, requestedBusinessId(request)),
+  }));
+
+  api.post("/operations/customers", async (request, reply) => {
+    const body = parse(createCustomerSchema, request.body);
+    const customer = await createCustomer(context.db, request.ownerId, body);
+    await recordAudit(context.db, {
+      ownerId: request.ownerId,
+      eventType: "customer.created",
+      actorType: "user",
+      actorId: request.ownerId,
+      metadata: { customerId: customer?.id },
+    });
+    reply.status(201);
+    return { customer };
+  });
+
+  api.get("/operations/services", async (request) => ({
+    services: await listServices(context.db, request.ownerId, requestedBusinessId(request)),
+  }));
+
+  api.post("/operations/services", async (request, reply) => {
+    const body = parse(createServiceSchema, request.body);
+    const service = await createService(context.db, request.ownerId, body);
+    await recordAudit(context.db, {
+      ownerId: request.ownerId,
+      eventType: "service.created",
+      actorType: "user",
+      actorId: request.ownerId,
+      metadata: { serviceId: service?.id },
+    });
+    reply.status(201);
+    return { service };
+  });
+
+  api.get("/operations/staff", async (request) => ({
+    staff: await listStaff(context.db, request.ownerId, requestedBusinessId(request)),
+  }));
+
+  api.post("/operations/staff", async (request, reply) => {
+    const body = parse(createStaffSchema, request.body);
+    const staff = await createStaff(context.db, request.ownerId, body);
+    await recordAudit(context.db, {
+      ownerId: request.ownerId,
+      eventType: "staff.created",
+      actorType: "user",
+      actorId: request.ownerId,
+      metadata: { staffId: staff?.id },
+    });
+    reply.status(201);
+    return { staff };
+  });
+
+  api.get("/operations/bookings", async (request) => {
+    const filters = parse(
+      z.object({
+        businessId: z.string().uuid().optional(),
+        status: z.string().max(40).optional(),
+        from: z.string().refine((value) => !Number.isNaN(Date.parse(value))).optional(),
+        to: z.string().refine((value) => !Number.isNaN(Date.parse(value))).optional(),
+      }),
+      request.query ?? {},
+    );
+    return { bookings: await listBookings(context.db, request.ownerId, filters) };
+  });
+
+  api.post("/operations/bookings", async (request, reply) => {
+    const body = parse(createBookingSchema, request.body);
+    const result = await createBooking(context.db, request.ownerId, body);
+    await recordAudit(context.db, {
+      ownerId: request.ownerId,
+      eventType: result.replayed ? "booking.replay" : "booking.created",
+      actorType: "user",
+      actorId: request.ownerId,
+      metadata: { bookingId: result.booking.id, reference: result.booking.reference },
+    });
+    reply.status(result.replayed ? 200 : 201);
+    return { booking: result.booking, replayed: result.replayed };
+  });
+
+  api.get("/operations/bookings/:id/history", async (request) => {
+    const { id } = parse(z.object({ id: z.string().uuid() }), request.params);
+    return { history: await listBookingStatusHistory(context.db, request.ownerId, id) };
+  });
+
+  api.post("/operations/bookings/:id/status", async (request) => {
+    const { id } = parse(z.object({ id: z.string().uuid() }), request.params);
+    const body = parse(bookingStatusSchema, request.body);
+    const result = await updateBookingStatus(context.db, request.ownerId, id, body);
+    await recordAudit(context.db, {
+      ownerId: request.ownerId,
+      eventType: "booking.status_changed",
+      actorType: "user",
+      actorId: request.ownerId,
+      metadata: { bookingId: id, status: body.status },
+    });
+    return { booking: result.booking };
+  });
+
+  api.post("/operations/bookings/:id/cancel", async (request) => {
+    const { id } = parse(z.object({ id: z.string().uuid() }), request.params);
+    const body = parse(z.object({ reason: z.string().trim().max(500).optional() }), request.body ?? {});
+    const result = await updateBookingStatus(context.db, request.ownerId, id, {
+      status: "cancelled",
+      reason: body.reason,
+    });
+    await recordAudit(context.db, {
+      ownerId: request.ownerId,
+      eventType: "booking.cancelled",
+      actorType: "user",
+      actorId: request.ownerId,
+      metadata: { bookingId: id, reason: body.reason ?? null },
+    });
+    return { booking: result.booking };
+  });
+
+  api.post("/operations/bookings/:id/reschedule", async (request) => {
+    const { id } = parse(z.object({ id: z.string().uuid() }), request.params);
+    const body = parse(rescheduleBookingSchema, request.body);
+    const result = await rescheduleBooking(context.db, request.ownerId, id, body);
+    await recordAudit(context.db, {
+      ownerId: request.ownerId,
+      eventType: "booking.rescheduled",
+      actorType: "user",
+      actorId: request.ownerId,
+      metadata: { bookingId: id },
+    });
+    return { booking: result.booking, replayed: result.replayed };
+  });
+
+  api.post("/operations/bookings/:id/consents", async (request, reply) => {
+    const { id } = parse(z.object({ id: z.string().uuid() }), request.params);
+    const body = parse(
+      z.object({
+        type: z.string().trim().min(1).max(80),
+        granted: z.boolean(),
+        source: z.string().trim().max(80).optional(),
+      }),
+      request.body,
+    );
+    await recordConsent(context.db, request.ownerId, { customerId: id, ...body });
+    reply.status(201);
+    return { ok: true };
+  });
+
+  api.get("/operations/calendar", async (request) => {
+    const query = parse(
+      z.object({
+        date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).default(new Date().toISOString().slice(0, 10)),
+        businessId: z.string().uuid().optional(),
+      }),
+      request.query ?? {},
+    );
+    const items = await getCalendar(context.db, request.ownerId, query.date, query.businessId);
+    return { date: query.date, items };
+  });
+
+  api.get("/operations/hours", async (request) => ({
+    hours: await listBusinessHours(context.db, request.ownerId, requestedBusinessId(request)),
+  }));
+
+  api.put("/operations/hours", async (request) => {
+    const body = parse(hoursSchema, request.body);
+    const hours = await saveBusinessHours(context.db, request.ownerId, body);
+    await recordAudit(context.db, {
+      ownerId: request.ownerId,
+      eventType: "hours.updated",
+      actorType: "user",
+      actorId: request.ownerId,
+      metadata: { businessId: body.businessId },
+    });
+    return { hours };
+  });
+
   }, { prefix: "/api" });
 
   if (existsSync(clientDir)) {
@@ -800,6 +1112,12 @@ export async function buildApp({ config, db }: BuildAppOptions): Promise<{
       maxAge: config.isProduction ? "1h" : 0,
     });
   }
+
+
+
+
+
+
 
   app.setNotFoundHandler((request: FastifyRequest, reply: FastifyReply) => {
     if (request.url.startsWith("/api/")) {
@@ -820,5 +1138,7 @@ export async function buildApp({ config, db }: BuildAppOptions): Promise<{
     });
   });
 
+
   return { app, context };
 }
+

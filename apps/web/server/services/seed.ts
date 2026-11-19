@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { eq } from "drizzle-orm";
 import { addDays, campaignBriefInputSchema, dateInputValue } from "@tulivu/shared";
 import type { Database } from "../db/client.js";
 import { businesses, campaigns, userSettings, users } from "../db/schema.js";
@@ -77,19 +78,22 @@ const seedBrief = campaignBriefInputSchema.parse({
  * owner so concurrent first requests cannot create duplicate sample data.
  */
 export async function ensureDemoWorkspace(db: Database, ownerId: string): Promise<void> {
-  const inserted = await db
+  await db
     .insert(users)
     .values({
       id: ownerId,
       email: `demo+${ownerId}@demo.tulivu.local`,
       displayName: "Demo workspace",
     })
-    .onConflictDoNothing()
-    .returning({ id: users.id });
-
-  if (inserted.length === 0) return;
+    .onConflictDoNothing();
 
   const businessId = deterministicUuid(`business:${ownerId}:mkono`);
+  const [existingBusiness] = await db
+    .select({ id: businesses.id })
+    .from(businesses)
+    .where(eq(businesses.id, businessId))
+    .limit(1);
+  if (existingBusiness) return;
   const campaignId = deterministicUuid(`campaign:${ownerId}:barrier-repair`);
   const today = dateInputValue();
 
@@ -154,6 +158,11 @@ export async function ensureDemoWorkspace(db: Database, ownerId: string): Promis
       note: "Sample workspace created. No real advertising accounts are connected.",
     },
   });
+
+  try {
+    const { seedDemoOperations } = await import("./operations.js");
+    await seedDemoOperations(db, ownerId, demoBusinessId(ownerId));
+  } catch {}
 }
 
 export function demoCampaignId(ownerId: string): string {

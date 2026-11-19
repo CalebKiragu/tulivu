@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import type { FastifyInstance, InjectOptions } from "fastify";
 import { buildApp } from "../../server/app.js";
-import { loadConfig } from "../../server/config.js";
+import { loadConfig, type AppConfig } from "../../server/config.js";
 import { createDatabase } from "../../server/db/client.js";
 
 type InjectResponse = Awaited<ReturnType<FastifyInstance["inject"]>>;
@@ -13,17 +13,19 @@ export interface TestHarness {
   close: () => Promise<void>;
 }
 
-export async function createTestHarness(): Promise<TestHarness> {
+export async function createTestHarness(overrides: Partial<AppConfig> = {}): Promise<TestHarness> {
   const dir = await mkdtemp(path.join(tmpdir(), "tulivu-test-"));
   const config = loadConfig({
     nodeEnv: "test",
     workflowInline: true,
     adapterMode: "demo",
+    authMode: "demo",
     pgliteDir: "memory",
     dataDir: dir,
     assetsDir: path.join(dir, "assets"),
     sessionSecret: "test-session-secret-with-more-than-32-characters",
     rateLimitMax: 10_000,
+    ...overrides,
   });
   const handle = await createDatabase(config);
   const { app } = await buildApp({ config, db: handle.db });
@@ -76,6 +78,10 @@ export class SessionClient {
 
   patch(url: string, payload: Record<string, unknown>) {
     return this.request("PATCH", url, payload);
+  }
+
+  put(url: string, payload: Record<string, unknown>) {
+    return this.request("PUT", url, payload);
   }
 }
 

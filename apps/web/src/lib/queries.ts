@@ -315,3 +315,62 @@ export function useCampaignEvents(campaignId: string | undefined, enabled = true
 
   return { connected, lastEvent };
 }
+
+export function useCustomers(businessId?: string) {
+  return useQuery({ queryKey: ["customers", businessId], queryFn: () => api.opsCustomers(businessId) });
+}
+export function useCreateCustomer() {
+  const qc = useQueryClient();
+  return useMutation({ mutationFn: api.opsCreateCustomer, onSuccess: () => qc.invalidateQueries({ queryKey: ["customers"] }) });
+}
+export function useServices(businessId?: string) {
+  return useQuery({ queryKey: ["services", businessId], queryFn: () => api.opsServices(businessId) });
+}
+export function useCreateService() {
+  const qc = useQueryClient();
+  return useMutation({ mutationFn: api.opsCreateService, onSuccess: () => qc.invalidateQueries({ queryKey: ["services"] }) });
+}
+export function useStaff(businessId?: string) {
+  return useQuery({ queryKey: ["staff", businessId], queryFn: () => api.opsStaff(businessId) });
+}
+export function useCreateStaff() {
+  const qc = useQueryClient();
+  return useMutation({ mutationFn: api.opsCreateStaff, onSuccess: () => qc.invalidateQueries({ queryKey: ["staff"] }) });
+}
+export function useBookings(params: Record<string,string> = {}) {
+  return useQuery({ queryKey: ["bookings", params], queryFn: () => api.opsBookings(params) });
+}
+export function useCreateBooking() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: api.opsCreateBooking,
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["bookings"] });
+      void qc.invalidateQueries({ queryKey: ["calendar"] });
+    },
+  });
+}
+export function useCancelBooking() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ bookingId, reason }: { bookingId: string; reason?: string }) =>
+      api.opsCancelBooking(bookingId, reason),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["bookings"] });
+      void qc.invalidateQueries({ queryKey: ["calendar"] });
+    },
+  });
+}
+export function useCalendar(date?: string, businessId?: string) {
+  return useQuery({ queryKey: ["calendar", date, businessId], queryFn: () => api.opsCalendar(date, businessId) });
+}
+export function useHours(businessId?: string) {
+  return useQuery({ queryKey: ["hours", businessId], queryFn: () => api.opsHours(businessId) });
+}
+export function useSaveHours() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: api.opsSaveHours,
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["hours"] }),
+  });
+}

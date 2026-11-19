@@ -305,7 +305,152 @@ export const api = {
   resetDemo: () => jsonRequest<{ ok: boolean; message: string }>("POST", "/api/demo/reset", { confirmation: "reset demo workspace" }),
 
   platforms: () => request<PlatformsResponse>("/api/platforms"),
+
+  opsCustomers: (businessId?: string) =>
+    request<{ customers: OpsCustomer[] }>(`/api/operations/customers${businessId ? `?businessId=${businessId}` : ""}`),
+  opsCreateCustomer: (input: OpsCustomerInput) =>
+    jsonRequest<{ customer: OpsCustomer }>("POST", "/api/operations/customers", input),
+  opsServices: (businessId?: string) =>
+    request<{ services: OpsService[] }>(`/api/operations/services${businessId ? `?businessId=${businessId}` : ""}`),
+  opsCreateService: (input: OpsServiceInput) =>
+    jsonRequest<{ service: OpsService }>("POST", "/api/operations/services", input),
+  opsStaff: (businessId?: string) =>
+    request<{ staff: OpsStaff[] }>(`/api/operations/staff${businessId ? `?businessId=${businessId}` : ""}`),
+  opsCreateStaff: (input: OpsStaffInput) =>
+    jsonRequest<{ staff: OpsStaff }>("POST", "/api/operations/staff", input),
+  opsBookings: (params: Record<string, string> = {}) => {
+    const q = new URLSearchParams(params).toString();
+    return request<{ bookings: OpsBooking[] }>(`/api/operations/bookings${q ? `?${q}` : ""}`);
+  },
+  opsCreateBooking: (input: OpsBookingInput) =>
+    jsonRequest<{ booking: OpsBooking; replayed: boolean }>("POST", "/api/operations/bookings", input),
+  opsCancelBooking: (bookingId: string, reason?: string) =>
+    jsonRequest<{ booking: OpsBooking }>("POST", `/api/operations/bookings/${bookingId}/cancel`, { reason }),
+  opsCalendar: (date?: string, businessId?: string) => {
+    const params = new URLSearchParams();
+    if (date) params.set("date", date);
+    if (businessId) params.set("businessId", businessId);
+    const q = params.toString();
+    return request<{ date: string; items: OpsCalendarItem[] }>(`/api/operations/calendar${q ? `?${q}` : ""}`);
+  },
+  opsHours: (businessId?: string) =>
+    request<{ hours: OpsHours[] }>(`/api/operations/hours${businessId ? `?businessId=${businessId}` : ""}`),
+  opsSaveHours: (input: OpsHoursInput) => jsonRequest<{ hours: OpsHours[] }>("PUT", "/api/operations/hours", input),
 };
+
+export interface OpsCustomer {
+  id: string;
+  businessId: string | null;
+  name: string;
+  email: string | null;
+  phone: string | null;
+  notes: string | null;
+  isDemo: number;
+}
+
+export interface OpsCustomerInput {
+  name: string;
+  email?: string;
+  phone?: string;
+  notes?: string;
+  businessId?: string;
+}
+
+export interface OpsService {
+  id: string;
+  businessId: string | null;
+  name: string;
+  slug: string;
+  durationMinutes: number;
+  bufferBeforeMinutes: number;
+  bufferAfterMinutes: number;
+  priceCents: number;
+  currency: string;
+  isActive: number;
+}
+
+export interface OpsServiceInput {
+  name: string;
+  description?: string;
+  shortDescription?: string;
+  durationMinutes: number;
+  bufferBeforeMinutes?: number;
+  bufferAfterMinutes?: number;
+  priceCents: number;
+  currency?: string;
+  category?: string;
+  businessId?: string;
+  isActive?: number;
+  sortOrder?: number;
+}
+
+export interface OpsStaff {
+  id: string;
+  businessId: string | null;
+  name: string;
+  title: string;
+  email: string | null;
+  phone: string | null;
+  isActive: number;
+}
+
+export interface OpsStaffInput {
+  name: string;
+  title?: string;
+  email?: string;
+  phone?: string;
+  businessId?: string;
+  serviceIds?: string[];
+}
+
+export interface OpsBooking {
+  id: string;
+  businessId: string | null;
+  reference: string;
+  customerId: string;
+  staffId: string;
+  serviceId: string;
+  startsAt: string;
+  endsAt: string;
+  status: string;
+  priceCents: number;
+  currency: string;
+  isDemo: number;
+}
+
+export interface OpsBookingInput {
+  customerId: string;
+  staffId: string;
+  serviceId: string;
+  startsAt: string;
+  businessId?: string;
+  source?: "manual" | "storefront" | "admin";
+  customerNote?: string;
+  internalNote?: string;
+  idempotencyKey?: string;
+  status?: "pending" | "confirmed";
+}
+
+export interface OpsCalendarItem {
+  booking: OpsBooking;
+  customer: OpsCustomer;
+  service: OpsService;
+  staff: OpsStaff;
+}
+
+export interface OpsHours {
+  id: string;
+  businessId: string | null;
+  weekday: number;
+  opensAt: string;
+  closesAt: string;
+  isClosed: number;
+}
+
+export interface OpsHoursInput {
+  businessId: string;
+  hours: Array<{ weekday: number; opensAt: string; closesAt: string; isClosed?: boolean }>;
+}
 
 export async function downloadCampaignExport(
   campaignId: string,

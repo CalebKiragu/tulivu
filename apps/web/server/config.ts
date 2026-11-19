@@ -53,6 +53,7 @@ export interface AppConfig {
     timeoutMs: number;
   };
   adapterMode: "demo" | "live";
+  authMode: "demo" | "required";
   workflowInline: boolean;
   demoFailExecution: boolean;
   rateLimitMax: number;
@@ -92,6 +93,7 @@ export function loadConfig(overrides: Partial<AppConfig> = {}): AppConfig {
   const imageProvider = (env("IMAGE_PROVIDER") ?? "mock") as AppConfig["image"]["provider"];
   const researchProvider = (env("WEB_RESEARCH_PROVIDER") ?? "mock") as AppConfig["research"]["provider"];
   const adapterMode = (env("ADAPTER_MODE") ?? "demo") as AppConfig["adapterMode"];
+  const authMode = (env("AUTH_MODE") ?? "demo") as AppConfig["authMode"];
   const { secret: sessionSecret } = deriveSessionSecret();
 
   const modelName = env("MODEL_NAME") ?? "mock-tulivu-1";
@@ -136,12 +138,16 @@ export function loadConfig(overrides: Partial<AppConfig> = {}): AppConfig {
       timeoutMs: intEnv("WEB_RESEARCH_TIMEOUT_MS", 20_000),
     },
     adapterMode,
+    authMode,
     workflowInline: boolEnv("WORKFLOW_INLINE", nodeEnv === "test"),
     demoFailExecution: boolEnv("DEMO_FAIL_EXECUTION", false),
     rateLimitMax: intEnv("RATE_LIMIT_MAX", 120),
     ...overrides,
   };
 
+  if (config.authMode !== "demo" && config.authMode !== "required") {
+    throw new Error("AUTH_MODE must be 'demo' or 'required'.");
+  }
   if (config.isProduction && !env("SESSION_SECRET")) {
     throw new Error("SESSION_SECRET must be set in production. Generate at least 32 random characters.");
   }
@@ -163,6 +169,7 @@ export function publicConfig(config: AppConfig) {
   return {
     demoMode: config.adapterMode === "demo",
     adapterMode: config.adapterMode,
+    authMode: config.authMode,
     modelProvider: config.model.provider,
     modelName: config.model.model,
     modelConfigured: config.model.provider === "mock" || Boolean(config.model.apiKey),
