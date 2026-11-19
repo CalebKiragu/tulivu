@@ -1,0 +1,24 @@
+version: 1
+frontend:
+  phases:
+    preBuild:
+      commands:
+        # Amplify's build image ships npm/yarn but not pnpm. Pin the same
+        # version declared in package.json and install it into a writable
+        # prefix so the build does not depend on a global npm prefix.
+        - npm install --global --prefix /tmp/tulivu-pnpm pnpm@10.18.0
+        - /tmp/tulivu-pnpm/bin/pnpm config set store-dir .pnpm-store
+        - /tmp/tulivu-pnpm/bin/pnpm install --frozen-lockfile --prod=false --prefer-offline
+    build:
+      commands:
+        - /tmp/tulivu-pnpm/bin/pnpm build
+  artifacts:
+    baseDirectory: apps/web/dist/client
+    files:
+      - '**/*'
+  cache:
+    paths:
+      - node_modules/**/*
+      - apps/web/node_modules/**/*
+      - packages/*/node_modules/**/*
+      - .pnpm-store/**/*
