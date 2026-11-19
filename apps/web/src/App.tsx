@@ -2,8 +2,10 @@ import { lazy, Suspense } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
 import { AppShell, ScrollToTop } from "@/components/app-shell";
 import { Wordmark } from "@/components/brand";
+import { useAuth, useConfig } from "@/lib/queries";
 
 const LandingPage = lazy(() => import("@/pages/landing"));
+const AuthPage = lazy(() => import("@/pages/auth"));
 const OverviewPage = lazy(() => import("@/pages/overview"));
 const BusinessesPage = lazy(() => import("@/pages/businesses"));
 const CampaignsPage = lazy(() => import("@/pages/campaigns"));
@@ -30,31 +32,45 @@ function RouteFallback() {
   );
 }
 
+function WorkspaceRoutes() {
+  const config = useConfig();
+  const authRequired = config.data?.config.authMode === "required";
+  const auth = useAuth(authRequired);
+
+  if (authRequired && (config.isLoading || auth.isLoading)) return <RouteFallback />;
+  if (authRequired && !auth.data) return <Navigate to="/auth" replace />;
+
+  return (
+    <Routes>
+      <Route path="/" element={<LandingPage />} />
+      <Route path="/auth" element={<AuthPage />} />
+      <Route path="/app" element={<AppShell />}>
+        <Route index element={<Navigate to="/app/overview" replace />} />
+        <Route path="overview" element={<OverviewPage />} />
+        <Route path="businesses" element={<BusinessesPage />} />
+        <Route path="campaigns" element={<CampaignsPage />} />
+        <Route path="campaigns/new" element={<NewCampaignPage />} />
+        <Route path="campaigns/:campaignId" element={<CampaignDetailPage />} />
+        <Route path="studio" element={<StudioPage />} />
+        <Route path="calendar" element={<CalendarPage />} />
+        <Route path="bookings" element={<BookingsPage />} />
+        <Route path="customers" element={<CustomersPage />} />
+        <Route path="services" element={<ServicesPage />} />
+        <Route path="team" element={<TeamPage />} />
+        <Route path="activity" element={<ActivityPage />} />
+        <Route path="settings" element={<SettingsPage />} />
+      </Route>
+      <Route path="*" element={<NotFoundPage />} />
+    </Routes>
+  );
+}
+
 export default function App() {
   return (
     <>
       <ScrollToTop />
       <Suspense fallback={<RouteFallback />}>
-        <Routes>
-          <Route path="/" element={<LandingPage />} />
-          <Route path="/app" element={<AppShell />}>
-            <Route index element={<Navigate to="/app/overview" replace />} />
-            <Route path="overview" element={<OverviewPage />} />
-            <Route path="businesses" element={<BusinessesPage />} />
-            <Route path="campaigns" element={<CampaignsPage />} />
-            <Route path="campaigns/new" element={<NewCampaignPage />} />
-            <Route path="campaigns/:campaignId" element={<CampaignDetailPage />} />
-            <Route path="studio" element={<StudioPage />} />
-            <Route path="calendar" element={<CalendarPage />} />
-            <Route path="bookings" element={<BookingsPage />} />
-            <Route path="customers" element={<CustomersPage />} />
-            <Route path="services" element={<ServicesPage />} />
-            <Route path="team" element={<TeamPage />} />
-            <Route path="activity" element={<ActivityPage />} />
-            <Route path="settings" element={<SettingsPage />} />
-          </Route>
-          <Route path="*" element={<NotFoundPage />} />
-        </Routes>
+        <WorkspaceRoutes />
       </Suspense>
     </>
   );

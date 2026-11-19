@@ -51,6 +51,10 @@ services:
       - key: DATA_DIR
         value: /tmp/tulivu
       # SQL migrations run automatically at boot against this database.
+      # "demo" preserves the zero-login public demo. Switch to "required" only
+      # after creating an owner account and migrating existing demo data.
+      - key: AUTH_MODE
+        value: demo
       - key: ADAPTER_MODE
         value: demo
       - key: MODEL_PROVIDER

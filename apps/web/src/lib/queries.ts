@@ -10,6 +10,7 @@ import { api } from "./api";
 
 export const queryKeys = {
   config: ["config"] as const,
+  auth: ["auth"] as const,
   overview: ["overview"] as const,
   businesses: ["businesses"] as const,
   business: (id: string) => ["business", id] as const,
@@ -45,6 +46,47 @@ export function useConfig() {
     queryKey: queryKeys.config,
     queryFn: api.config,
     staleTime: 5 * 60_000,
+  });
+}
+
+export function useAuth(enabled = true) {
+  return useQuery({
+    queryKey: queryKeys.auth,
+    queryFn: api.authMe,
+    enabled,
+    retry: false,
+    staleTime: 5 * 60_000,
+  });
+}
+
+export function useLogin() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: api.authLogin,
+    onSuccess: (data) => {
+      queryClient.setQueryData(queryKeys.auth, data);
+    },
+  });
+}
+
+export function useRegister() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: api.authRegister,
+    onSuccess: (data) => {
+      queryClient.setQueryData(queryKeys.auth, data);
+    },
+  });
+}
+
+export function useLogout() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: api.authLogout,
+    onSuccess: () => {
+      queryClient.setQueryData(queryKeys.auth, null);
+      void queryClient.clear();
+    },
   });
 }
 

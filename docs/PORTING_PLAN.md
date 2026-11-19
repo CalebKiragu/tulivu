@@ -21,7 +21,7 @@ This plan tracks the merge of Nuru's booking/client management/storefront into T
 - [x] Phase 1: Schema unification
 - [x] Phase 2: Backend services & APIs
 - [ ] Phase 3: Agent tools for operations
-- [x] Phase 4: UI port & simplification
+- [x] Phase 4: UI port & simplification (including auth screens and route guard)
 - [ ] Phase 5: Public storefront
 - [x] Phase 6: Tests & hardening
 
@@ -36,6 +36,25 @@ This plan tracks the merge of Nuru's booking/client management/storefront into T
 - Explicit status transitions, cancellation and reschedule endpoints.
 - Business-hours saves replace only the selected business.
 - Acceptance tests cover auth, tenant isolation, cross-workspace references, double booking, invalid dates, idempotency, hours enforcement, derived pricing and status history.
+
+## Merge readiness (feature branch)
+
+Ready to merge into `main`:
+
+- [x] Operations/auth backend, migration and 13 new acceptance tests.
+- [x] Auth UI: `/auth` login/register, session-aware shell, sign-out, and `AUTH_MODE=required` route guard.
+- [x] Business scoping, create/cancel actions and error feedback across Calendar, Bookings, Customers, Services and Team pages.
+- [x] `AUTH_MODE` documented in `.env.example`, `render.yaml` and deployment docs; default stays `demo` so current visitors are not locked out.
+- [x] `pnpm -r typecheck`, `pnpm test` (38/38) and `pnpm build` pass.
+
+Still post-merge, tracked separately:
+
+- [ ] Durable workflow queue/workers so SSE and long jobs survive restarts and scale past one instance.
+- [ ] Public storefront and object storage for binary assets.
+- [ ] Live ad-platform adapters once credentials exist.
+- [ ] Switch production to `AUTH_MODE=required` after an owner account is created and existing demo data is handled.
+
+`main` has not been merged yet. The feature branch is pushed for review.
 
 ## Notes
 

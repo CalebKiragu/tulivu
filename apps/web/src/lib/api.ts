@@ -74,6 +74,7 @@ function jsonRequest<T>(method: "POST" | "PATCH" | "PUT", path: string, body: un
 export interface PublicConfig {
   demoMode: boolean;
   adapterMode: "demo" | "live";
+  authMode: "demo" | "required";
   modelProvider: string;
   modelName: string;
   modelConfigured: boolean;
@@ -83,6 +84,30 @@ export interface PublicConfig {
   workflowMode: string;
   persistence: string;
   dataDir?: string;
+}
+
+export interface AuthContext {
+  userId: string;
+  organizationId: string;
+  ownerId: string;
+  role: "owner" | "admin" | "staff" | "viewer";
+  user: { id: string; email: string; displayName: string };
+  organization: { id: string; name: string; slug: string; timezone: string; ownerId: string };
+}
+
+export interface AuthResponse {
+  auth: AuthContext;
+}
+
+export interface AuthLoginInput {
+  email: string;
+  password: string;
+}
+
+export interface AuthRegisterInput extends AuthLoginInput {
+  displayName: string;
+  organizationName: string;
+  timezone?: string;
 }
 
 export interface CurrencyOption {
@@ -251,6 +276,10 @@ export interface ArtifactPatchResponse {
 
 export const api = {
   config: () => request<ConfigResponse>("/api/config"),
+  authMe: () => request<AuthResponse>("/api/auth/me"),
+  authLogin: (input: AuthLoginInput) => jsonRequest<AuthResponse>("POST", "/api/auth/login", input),
+  authRegister: (input: AuthRegisterInput) => jsonRequest<AuthResponse>("POST", "/api/auth/register", input),
+  authLogout: () => jsonRequest<{ ok: boolean }>("POST", "/api/auth/logout", {}),
   overview: () => request<OverviewApiResponse>("/api/overview"),
 
   businesses: () => request<BusinessListResponse>("/api/businesses"),
