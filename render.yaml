@@ -46,10 +46,11 @@ services:
           name: tulivu
           type: web
           envVarKey: RENDER_EXTERNAL_URL
-      # The Amplify static site calls this API cross-origin. Add any custom
-      # domain to this comma-separated list when one is attached.
+      # The Amplify static site calls this API cross-origin. Amplify serves the
+      # branch at <branch>.<app-id>.amplifyapp.com; the bare app domain returns
+      # 404. Add any custom domain to this comma-separated list when attached.
       - key: CORS_ORIGIN
-        value: https://d1od9e2r6kgpgt.amplifyapp.com
+        value: https://main.d1od9e2r6kgpgt.amplifyapp.com,https://d1od9e2r6kgpgt.amplifyapp.com
       # The filesystem is ephemeral on the free plan. PostgreSQL holds all
       # structured data and SVG creatives; this path is only for binary assets.
       - key: DATA_DIR

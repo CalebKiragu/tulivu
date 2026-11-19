@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createTestHarness, type TestHarness } from "./helpers/app.js";
 
-const allowedOrigin = "https://d1od9e2r6kgpgt.amplifyapp.com";
+const allowedOrigin = "https://main.d1od9e2r6kgpgt.amplifyapp.com";
 
 describe("credentialed CORS for a static frontend", () => {
   let harness: TestHarness;

@@ -84,10 +84,15 @@ env:
 ```
 
 The client will then call Render directly with credentials. The Render service
-must allow the Amplify origin through `CORS_ORIGIN`; the blueprint sets this for
-the default `*.amplifyapp.com` domain. Add any custom domain to that
-comma-separated list. Cookies switch to `SameSite=None; Secure` automatically
-when `CORS_ORIGIN` is set.
+must allow the Amplify origin through `CORS_ORIGIN`. Amplify serves a branch at
+`https://<branch>.<app-id>.amplifyapp.com`; the bare app domain returns 404. The
+blueprint allows both the branch host and the bare host for the default app.
+Add any custom domain to that comma-separated list. Cookies switch to
+`SameSite=None; Secure` automatically when `CORS_ORIGIN` is set.
+
+If `VITE_API_BASE_URL` is omitted, the client also falls back to
+`https://tulivu.onrender.com` when it detects an `*.amplifyapp.com` hostname.
+Set the variable explicitly when pointing a custom domain at a different API.
 
 ## Generic Node host
 
