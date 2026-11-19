@@ -37,7 +37,7 @@ function headersFor(init: RequestInit): Headers {
 
 const amplifyHostedApi =
   typeof window !== "undefined" && window.location.hostname.endsWith(".amplifyapp.com")
-    ? "https://tulivu.onrender.com"
+    ? "https://api.tulivu.menodao.org"
     : "";
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL ?? amplifyHostedApi).replace(/\/$/, "");
 

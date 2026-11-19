@@ -80,7 +80,7 @@ environment to the Render service URL, for example:
 
 ```yaml
 env:
-  VITE_API_BASE_URL: https://tulivu.onrender.com
+  VITE_API_BASE_URL: https://api.tulivu.menodao.org
 ```
 
 The client will then call Render directly with credentials. The Render service
@@ -91,7 +91,7 @@ Add any custom domain to that comma-separated list. Cookies switch to
 `SameSite=None; Secure` automatically when `CORS_ORIGIN` is set.
 
 If `VITE_API_BASE_URL` is omitted, the client also falls back to
-`https://tulivu.onrender.com` when it detects an `*.amplifyapp.com` hostname.
+`https://api.tulivu.menodao.org` when it detects an `*.amplifyapp.com` hostname.
 Set the variable explicitly when pointing a custom domain at a different API.
 
 ## Generic Node host
