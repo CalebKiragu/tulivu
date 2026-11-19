@@ -1,6 +1,6 @@
 version: 1
 env:
-  VITE_API_BASE_URL: https://api.tulivu.menodao.org
+  VITE_API_BASE_URL: https://api.tulivu.app
 frontend:
   phases:
     preBuild:

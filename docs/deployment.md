@@ -80,7 +80,7 @@ environment to the API URL, for example:
 
 ```yaml
 env:
-  VITE_API_BASE_URL: https://api.tulivu.menodao.org
+  VITE_API_BASE_URL: https://api.tulivu.app
 ```
 
 The client will then call the API directly with credentials. The API host
@@ -91,7 +91,7 @@ Add any custom domain to that comma-separated list. Cookies switch to
 `SameSite=None; Secure` automatically when `CORS_ORIGIN` is set.
 
 If `VITE_API_BASE_URL` is omitted, the client also falls back to
-`https://api.tulivu.menodao.org` when it detects an `*.amplifyapp.com` hostname.
+`https://api.tulivu.app` when it detects an `*.amplifyapp.com` hostname.
 Set the variable explicitly when pointing a custom domain at a different API.
 
 ### Lightsail API host
